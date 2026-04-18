@@ -4,29 +4,30 @@ let editId = null;
 function loadData() {
 
     fetch("DB_Ops.php?action=get")
-    .then(res => res.json())
-    .then(data => {
+        .then(res => res.json())
+        .then(data => {
 
-        let rows = "";
-        let income = 0;
-        let expense = 0;
+            let rows = "";
+            let income = 0;
+            let expense = 0;
 
-        data.forEach(item => {
+            data.forEach(item => {
 
-            let amount = parseFloat(item.amount);
+                let amount = parseFloat(item.amount);
 
-            if (item.type === "income") income += amount;
-            else expense += amount;
+                if (item.type === "income") income += amount;
+                else expense += amount;
 
-            rows += `
+                rows += `
                 <tr>
                     <td>${item.title}</td>
                     <td>${item.amount}</td>
                     <td>${item.type}</td>
                     <td>${item.category}</td>
                     <td>${item.date}</td>
+                    
                     <td>
-                        <button class="btn-convert" onclick="convertCurrency(${item.amount})">💱</button>
+                         <button class="btn-convert" onclick="convertCurrency(${item.amount}, ${item.id})">💱</button>
 
                         <button class="btn-edit" onclick="startEdit(
                             ${item.id},
@@ -39,19 +40,20 @@ function loadData() {
 
                         <button class="btn-delete" onclick="deleteTransaction(${item.id})">❌</button>
                     </td>
+                    <td id="converted-${item.id}">—</td>
                 </tr>
             `;
+            });
+
+            document.getElementById("tableData").innerHTML = rows;
+
+            document.getElementById("incomeTotal").innerText = income;
+            document.getElementById("expenseTotal").innerText = expense;
+            document.getElementById("balanceTotal").innerText = income - expense;
+
+            // ✅ MUST BE INSIDE THEN
+            renderChart(income, expense);
         });
-
-        document.getElementById("tableData").innerHTML = rows;
-
-        document.getElementById("incomeTotal").innerText = income;
-        document.getElementById("expenseTotal").innerText = expense;
-        document.getElementById("balanceTotal").innerText = income - expense;
-
-        // ✅ MUST BE INSIDE THEN
-        renderChart(income, expense);
-    });
 }
 
 
@@ -83,21 +85,21 @@ function addTransaction() {
         method: "POST",
         body: formData
     })
-    .then(res => res.json())
-    .then(data => {
+        .then(res => res.json())
+        .then(data => {
 
-        alert(data.message);
+            alert(data.message);
 
-        editId = null;
-        document.getElementById("submitBtn").innerText = "+ Add Transaction";
+            editId = null;
+            document.getElementById("submitBtn").innerText = "+ Add Transaction";
 
-        document.getElementById("title").value = "";
-        document.getElementById("amount").value = "";
-        document.getElementById("category").value = "";
-        document.getElementById("date").value = "";
+            document.getElementById("title").value = "";
+            document.getElementById("amount").value = "";
+            document.getElementById("category").value = "";
+            document.getElementById("date").value = "";
 
-        loadData();
-    });
+            loadData();
+        });
 }
 
 
@@ -127,27 +129,25 @@ function deleteTransaction(id) {
         method: "POST",
         body: formData
     })
-    .then(res => res.json())
-    .then(data => {
-        alert(data.message);
-        loadData();
-    });
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            loadData();
+        });
 }
 
 
 // ================= CONVERT API =================
-function convertCurrency(amount) {
-
+function convertCurrency(amount, id) {
     fetch(`API_Ops.php?from=EGP&to=USD&amount=${amount}`)
-    .then(res => res.json())
-    .then(data => {
-
-        if (data.status === "success") {
-            alert("💱 USD: " + data.result);
-        } else {
-            alert("Error");
-        }
-    });
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "success") {
+                document.getElementById("converted-" + id).innerText = "$ " + data.result;
+            } else {
+                document.getElementById("converted-" + id).innerText = "Error";
+            }
+        });
 }
 
 

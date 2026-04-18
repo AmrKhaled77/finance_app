@@ -60,7 +60,10 @@
                     <th>Type</th>
                     <th>Category</th>
                     <th>Date</th>
+                
                     <th>Actions</th>
+                    <th>Converted to USD</th>
+                    
                 </tr>
             </thead>
 

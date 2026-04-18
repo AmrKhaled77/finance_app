@@ -73,4 +73,21 @@ if (isset($_POST['action']) && $_POST['action'] == "delete") {
     echo json_encode(["status" => "success", "message" => "Deleted"]);
     exit;
 }
+
+// At the bottom of API_Ops.php
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    $action = $_GET['action'] ?? '';
+
+    if ($action === 'getAllCurrencies') {
+        $data = getAllCurrencies();
+    } elseif ($action === 'getRates') {
+        $base = $_GET['base'] ?? 'usd';
+        $data = getRates($base);
+    } else {
+        $data = ['error' => 'Unknown action'];
+    }
+
+    header('Content-Type: application/json');
+    echo json_encode($data);
+}
 ?>
