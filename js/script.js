@@ -1,4 +1,5 @@
 let editId = null;
+let chart;
 
 // ================= LOAD DATA =================
 function loadData() {
@@ -11,9 +12,38 @@ function loadData() {
             let income = 0;
             let expense = 0;
 
+            // ================= EMPTY DATA HANDLING =================
+            if (!data || data.length === 0) {
+
+                rows = `
+                <tr>
+                    <td colspan="7" style="
+                        text-align:center;
+                        padding:30px;
+                        color:#777;
+                        font-size:16px;
+                    ">
+                        📭 No transactions found<br>
+                        <small>Start by adding your first income or expense 💡</small>
+                    </td>
+                </tr>
+                `;
+
+                document.getElementById("tableData").innerHTML = rows;
+
+                document.getElementById("incomeTotal").innerText = 0;
+                document.getElementById("expenseTotal").innerText = 0;
+                document.getElementById("balanceTotal").innerText = 0;
+
+                renderChart(0, 0);
+
+                return;
+            }
+
+            // ================= DATA LOOP =================
             data.forEach(item => {
 
-                let amount = parseFloat(item.amount);
+                let amount = Number(item.amount) || 0;
 
                 if (item.type === "income") income += amount;
                 else expense += amount;
@@ -21,39 +51,83 @@ function loadData() {
                 rows += `
                 <tr>
                     <td>${item.title}</td>
-                    <td>${item.amount}</td>
+                    <td>${amount}</td>
                     <td>${item.type}</td>
                     <td>${item.category}</td>
                     <td>${item.date}</td>
-                    
+
                     <td>
-                         <button class="btn-convert" onclick="convertCurrency(${item.amount}, ${item.id})">💱</button>
-
-                        <button class="btn-edit" onclick="startEdit(
-                            ${item.id},
-                            '${item.title}',
-                            ${item.amount},
-                            '${item.type}',
-                            '${item.category}',
-                            '${item.date}'
-                        )">✏️</button>
-
-                        <button class="btn-delete" onclick="deleteTransaction(${item.id})">❌</button>
+                        <button class="btn-convert" data-id="${item.id}" data-amount="${amount}">💱</button>
+                        <button class="btn-edit" data-item='${JSON.stringify(item)}'>✏️</button>
+                        <button class="btn-delete" data-id="${item.id}">❌</button>
                     </td>
+
                     <td id="converted-${item.id}">—</td>
                 </tr>
-            `;
+                `;
             });
 
+            // ================= RENDER TABLE =================
             document.getElementById("tableData").innerHTML = rows;
 
+            // ================= UPDATE STATS =================
             document.getElementById("incomeTotal").innerText = income;
             document.getElementById("expenseTotal").innerText = expense;
-            document.getElementById("balanceTotal").innerText = income - expense;
 
-            // ✅ MUST BE INSIDE THEN
+            const balance = income - expense;
+            document.getElementById("balanceTotal").innerText = balance.toFixed(2);
+
+            // ================= EVENTS + CHART =================
+            attachTableEvents();
             renderChart(income, expense);
+        })
+        .catch(err => {
+            console.error("Error loading data:", err);
+
+            document.getElementById("tableData").innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center; color:red;">
+                        ⚠️ Failed to load data
+                    </td>
+                </tr>
+            `;
+
+            renderChart(0, 0);
         });
+}
+
+
+// ================= ATTACH EVENTS =================
+function attachTableEvents() {
+
+    // EDIT
+    document.querySelectorAll(".btn-edit").forEach(btn => {
+        btn.addEventListener("click", () => {
+            const item = JSON.parse(btn.dataset.item);
+            startEdit(
+                item.id,
+                item.title,
+                item.amount,
+                item.type,
+                item.category,
+                item.date
+            );
+        });
+    });
+
+    // DELETE
+    document.querySelectorAll(".btn-delete").forEach(btn => {
+        btn.addEventListener("click", () => {
+            deleteTransaction(btn.dataset.id);
+        });
+    });
+
+    // CONVERT
+    document.querySelectorAll(".btn-convert").forEach(btn => {
+        btn.addEventListener("click", () => {
+            convertCurrency(btn.dataset.amount, btn.dataset.id);
+        });
+    });
 }
 
 
@@ -62,16 +136,15 @@ function addTransaction() {
 
     let formData = new FormData();
 
-    let title = document.getElementById("title").value;
-    let amount = document.getElementById("amount").value;
-    let type = document.getElementById("type").value;
-    let category = document.getElementById("category").value;
-    let date = document.getElementById("date").value;
+    const title = document.getElementById("title").value;
+    const amount = document.getElementById("amount").value;
+    const type = document.getElementById("type").value;
+    const category = document.getElementById("category").value;
+    const date = document.getElementById("date").value;
 
-    if (editId === null) {
-        formData.append("action", "add");
-    } else {
-        formData.append("action", "update");
+    formData.append("action", editId === null ? "add" : "update");
+
+    if (editId !== null) {
         formData.append("id", editId);
     }
 
@@ -93,13 +166,19 @@ function addTransaction() {
             editId = null;
             document.getElementById("submitBtn").innerText = "+ Add Transaction";
 
-            document.getElementById("title").value = "";
-            document.getElementById("amount").value = "";
-            document.getElementById("category").value = "";
-            document.getElementById("date").value = "";
+            resetForm();
 
             loadData();
         });
+}
+
+
+// ================= RESET FORM =================
+function resetForm() {
+    document.getElementById("title").value = "";
+    document.getElementById("amount").value = "";
+    document.getElementById("category").value = "";
+    document.getElementById("date").value = "";
 }
 
 
@@ -137,78 +216,85 @@ function deleteTransaction(id) {
 }
 
 
-// ================= CONVERT API =================
+// ================= CONVERT CURRENCY =================
 function convertCurrency(amount, id) {
-    fetch(`API_Ops.php?from=EGP&to=USD&amount=${amount}`)
+
+    fetch(`API_Ops.php?from=EGP&to=USD&amount=${encodeURIComponent(amount)}`)
         .then(res => res.json())
         .then(data => {
+
+            const cell = document.getElementById("converted-" + id);
+
             if (data.status === "success") {
-                document.getElementById("converted-" + id).innerText = "$ " + data.result;
+                cell.innerText = "$ " + data.result;
             } else {
-                document.getElementById("converted-" + id).innerText = "Error";
+                cell.innerText = "Error";
             }
         });
 }
 
 
-// INIT
-loadData();
-
-
-
-let chart;
-
+// ================= CHART =================
 function renderChart(income, expense) {
 
     const ctx = document.getElementById("financeChart").getContext("2d");
 
-    if (chart) {
-        chart.destroy();
+    const isEmpty = income === 0 && expense === 0;
+
+    // ================= EMPTY STATE =================
+    if (isEmpty) {
+
+        if (chart) {
+            chart.destroy();
+            chart = null;
+        }
+
+        // Optional: show message instead of chart
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "#888";
+        ctx.textAlign = "center";
+        ctx.fillText("No data to display 📭", ctx.canvas.width / 2, ctx.canvas.height / 2);
+
+        return;
     }
 
-    chart = new Chart(ctx, {
-        type: "doughnut", // 👈 better than pie (more modern look)
+    // ================= CREATE CHART =================
+    if (!chart) {
 
-        data: {
-            labels: ["Income", "Expense"],
-            datasets: [{
-                data: [income, expense],
+        chart = new Chart(ctx, {
+            type: "doughnut",
 
-                backgroundColor: [
-                    "#2ecc71",
-                    "#e74c3c"
-                ],
+            data: {
+                labels: ["Income", "Expense"],
+                datasets: [{
+                    data: [income, expense],
+                    backgroundColor: ["#2ecc71", "#e74c3c"],
+                    borderWidth: 3
+                }]
+            },
 
-                borderColor: "#ffffff",
-                borderWidth: 3,
-                hoverOffset: 15
-            }]
-        },
+            options: {
+                responsive: true,
+                cutout: "60%",
 
-        options: {
-            responsive: true,
-            cutout: "60%", // 👈 makes it modern donut style
-
-            plugins: {
-                legend: {
-                    position: "bottom",
-                    labels: {
-                        color: "#2c3e50",
-                        font: {
-                            size: 14,
-                            weight: "bold"
-                        },
-                        padding: 20
+                plugins: {
+                    legend: {
+                        position: "bottom"
                     }
-                },
-
-                tooltip: {
-                    backgroundColor: "#2c3e50",
-                    titleColor: "#fff",
-                    bodyColor: "#fff",
-                    padding: 10
                 }
             }
-        }
-    });
+        });
+
+    } else {
+
+        // ================= UPDATE CHART =================
+        chart.data.datasets[0].data = [income, expense];
+        chart.update();
+    }
 }
+
+
+// ================= INIT =================
+loadData();
