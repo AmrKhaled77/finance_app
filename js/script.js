@@ -183,18 +183,20 @@ function resetForm() {
     document.getElementById("type").value = "";
     document.getElementById("category").value = "";
     document.getElementById("date").value = "";
+
+    editId = null; // 🔥 IMPORTANT FIX
+    document.getElementById("submitBtn").innerText = "+ Add Transaction";
 }
 
 // ================= TABLE EVENTS =================
 function attachTableEvents() {
 
-    document.querySelectorAll(".btn-delete").forEach(btn => {
-        btn.onclick = () => deleteTransaction(btn.dataset.id);
-    });
-
     document.querySelectorAll(".btn-edit").forEach(btn => {
-        btn.onclick = () => {
+
+        btn.addEventListener("click", () => {
+
             const item = JSON.parse(btn.dataset.item);
+
             editId = item.id;
 
             document.getElementById("title").value = item.title;
@@ -204,7 +206,7 @@ function attachTableEvents() {
             document.getElementById("date").value = item.date;
 
             document.getElementById("submitBtn").innerText = "Update Transaction";
-        };
+        });
     });
 }
 
@@ -223,6 +225,61 @@ function deleteTransaction(id) {
     .then(data => {
         alert(data.message);
         loadData();
+    });
+}
+
+
+
+function renderChart(income, expense) {
+
+    const ctx = document.getElementById("financeChart");
+
+    if (chart) {
+        chart.destroy();
+    }
+
+    const isEmpty = income === 0 && expense === 0;
+
+    if (isEmpty) {
+
+        chart = new Chart(ctx, {
+            type: "doughnut",
+            data: {
+                labels: ["No Data"],
+                datasets: [{
+                    data: [1],
+                    backgroundColor: ["#ddd"]
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+
+        return;
+    }
+
+    chart = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels: ["Income", "Expense"],
+            datasets: [{
+                data: [income, expense],
+                backgroundColor: ["#2ecc71", "#e74c3c"]
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: "bottom"
+                }
+            }
+        }
     });
 }
 
