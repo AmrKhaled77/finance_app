@@ -12,19 +12,12 @@ function loadData() {
             let income = 0;
             let expense = 0;
 
-            // ================= EMPTY DATA HANDLING =================
             if (!data || data.length === 0) {
 
                 rows = `
                 <tr>
-                    <td colspan="7" style="
-                        text-align:center;
-                        padding:30px;
-                        color:#777;
-                        font-size:16px;
-                    ">
-                        📭 No transactions found<br>
-                        <small>Start by adding your first income or expense 💡</small>
+                    <td colspan="7" style="text-align:center; padding:30px; color:#777;">
+                        📭 No transactions found
                     </td>
                 </tr>
                 `;
@@ -36,11 +29,9 @@ function loadData() {
                 document.getElementById("balanceTotal").innerText = 0;
 
                 renderChart(0, 0);
-
                 return;
             }
 
-            // ================= DATA LOOP =================
             data.forEach(item => {
 
                 let amount = Number(item.amount) || 0;
@@ -55,92 +46,116 @@ function loadData() {
                     <td>${item.type}</td>
                     <td>${item.category}</td>
                     <td>${item.date}</td>
-
                     <td>
-                        <button class="btn-convert" data-id="${item.id}" data-amount="${amount}">💱</button>
                         <button class="btn-edit" data-item='${JSON.stringify(item)}'>✏️</button>
                         <button class="btn-delete" data-id="${item.id}">❌</button>
+                        <button class="btn-convert" data-id="${item.id}" data-amount="${amount}">💱</button>
                     </td>
-
                     <td id="converted-${item.id}">—</td>
                 </tr>
                 `;
             });
 
-            // ================= RENDER TABLE =================
             document.getElementById("tableData").innerHTML = rows;
 
-            // ================= UPDATE STATS =================
             document.getElementById("incomeTotal").innerText = income;
             document.getElementById("expenseTotal").innerText = expense;
+            document.getElementById("balanceTotal").innerText = (income - expense).toFixed(2);
 
-            const balance = income - expense;
-            document.getElementById("balanceTotal").innerText = balance.toFixed(2);
-
-            // ================= EVENTS + CHART =================
             attachTableEvents();
             renderChart(income, expense);
-        })
-        .catch(err => {
-            console.error("Error loading data:", err);
-
-            document.getElementById("tableData").innerHTML = `
-                <tr>
-                    <td colspan="7" style="text-align:center; color:red;">
-                        ⚠️ Failed to load data
-                    </td>
-                </tr>
-            `;
-
-            renderChart(0, 0);
         });
 }
 
+// ================= ERROR HANDLING =================
+function setError(id, msg) {
+    document.getElementById(id + "Error").innerText = msg;
+}
 
-// ================= ATTACH EVENTS =================
-function attachTableEvents() {
-
-    // EDIT
-    document.querySelectorAll(".btn-edit").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const item = JSON.parse(btn.dataset.item);
-            startEdit(
-                item.id,
-                item.title,
-                item.amount,
-                item.type,
-                item.category,
-                item.date
-            );
-        });
-    });
-
-    // DELETE
-    document.querySelectorAll(".btn-delete").forEach(btn => {
-        btn.addEventListener("click", () => {
-            deleteTransaction(btn.dataset.id);
-        });
-    });
-
-    // CONVERT
-    document.querySelectorAll(".btn-convert").forEach(btn => {
-        btn.addEventListener("click", () => {
-            convertCurrency(btn.dataset.amount, btn.dataset.id);
-        });
+function clearErrors() {
+    ["title", "amount", "type", "category", "date"].forEach(id => {
+        document.getElementById(id + "Error").innerText = "";
     });
 }
 
+// ================= LIVE VALIDATION CLEAR =================
+function attachLiveValidation() {
+
+    ["title", "amount", "type", "category", "date"].forEach(id => {
+
+        const el = document.getElementById(id);
+
+        el.addEventListener("input", () => {
+            setError(id, "");
+        });
+
+        el.addEventListener("change", () => {
+            setError(id, "");
+        });
+    });
+}
 
 // ================= ADD / UPDATE =================
 function addTransaction() {
 
-    let formData = new FormData();
+    clearErrors();
 
-    const title = document.getElementById("title").value;
-    const amount = document.getElementById("amount").value;
+    let isValid = true;
+
+    const title = document.getElementById("title").value.trim();
+    const amount = document.getElementById("amount").value.trim();
     const type = document.getElementById("type").value;
-    const category = document.getElementById("category").value;
+    const category = document.getElementById("category").value.trim();
     const date = document.getElementById("date").value;
+
+    // TITLE
+    if (!title) {
+        setError("title", "Title is required");
+        isValid = false;
+    } else if (title.length < 3) {
+        setError("title", "Minimum 3 characters");
+        isValid = false;
+    }
+
+    // AMOUNT
+    if (!amount) {
+        setError("amount", "Amount is required");
+        isValid = false;
+    } else if (isNaN(amount) || Number(amount) <= 0) {
+        setError("amount", "Must be > 0");
+        isValid = false;
+    }
+
+    // TYPE
+    if (!type) {
+        setError("type", "Select type");
+        isValid = false;
+    }
+
+    // CATEGORY
+    if (!category) {
+        setError("category", "Category required");
+        isValid = false;
+    }
+
+    // DATE
+    if (!date) {
+        setError("date", "Date required");
+        isValid = false;
+    } else {
+        const selectedDate = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (selectedDate > today) {
+            setError("date", "Future date not allowed");
+            isValid = false;
+        }
+    }
+
+    if (!isValid) return;
+
+    let formData = new FormData();
 
     formData.append("action", editId === null ? "add" : "update");
 
@@ -158,44 +173,50 @@ function addTransaction() {
         method: "POST",
         body: formData
     })
-        .then(res => res.json())
-        .then(data => {
+    .then(res => res.json())
+    .then(data => {
 
-            alert(data.message);
+        alert(data.message);
 
-            editId = null;
-            document.getElementById("submitBtn").innerText = "+ Add Transaction";
+        editId = null;
+        document.getElementById("submitBtn").innerText = "+ Add Transaction";
 
-            resetForm();
-
-            loadData();
-        });
+        resetForm();
+        loadData();
+    });
 }
 
-
-// ================= RESET FORM =================
+// ================= RESET =================
 function resetForm() {
     document.getElementById("title").value = "";
     document.getElementById("amount").value = "";
+    document.getElementById("type").value = "";
     document.getElementById("category").value = "";
     document.getElementById("date").value = "";
 }
 
+// ================= TABLE EVENTS =================
+function attachTableEvents() {
 
-// ================= START EDIT =================
-function startEdit(id, title, amount, type, category, date) {
+    document.querySelectorAll(".btn-delete").forEach(btn => {
+        btn.onclick = () => deleteTransaction(btn.dataset.id);
+    });
 
-    editId = id;
+    document.querySelectorAll(".btn-edit").forEach(btn => {
+        btn.onclick = () => {
+            const item = JSON.parse(btn.dataset.item);
+            editId = item.id;
 
-    document.getElementById("title").value = title;
-    document.getElementById("amount").value = amount;
-    document.getElementById("type").value = type;
-    document.getElementById("category").value = category;
-    document.getElementById("date").value = date;
+            document.getElementById("title").value = item.title;
+            document.getElementById("amount").value = item.amount;
+            document.getElementById("type").value = item.type;
+            document.getElementById("category").value = item.category;
+            document.getElementById("date").value = item.date;
 
-    document.getElementById("submitBtn").innerText = "Update Transaction";
+            document.getElementById("submitBtn").innerText = "Update Transaction";
+        };
+    });
 }
-
 
 // ================= DELETE =================
 function deleteTransaction(id) {
@@ -208,93 +229,13 @@ function deleteTransaction(id) {
         method: "POST",
         body: formData
     })
-        .then(res => res.json())
-        .then(data => {
-            alert(data.message);
-            loadData();
-        });
+    .then(res => res.json())
+    .then(data => {
+        alert(data.message);
+        loadData();
+    });
 }
-
-
-// ================= CONVERT CURRENCY =================
-function convertCurrency(amount, id) {
-
-    fetch(`API_Ops.php?from=EGP&to=USD&amount=${encodeURIComponent(amount)}`)
-        .then(res => res.json())
-        .then(data => {
-
-            const cell = document.getElementById("converted-" + id);
-
-            if (data.status === "success") {
-                cell.innerText = "$ " + data.result;
-            } else {
-                cell.innerText = "Error";
-            }
-        });
-}
-
-
-// ================= CHART =================
-function renderChart(income, expense) {
-
-    const ctx = document.getElementById("financeChart").getContext("2d");
-
-    const isEmpty = income === 0 && expense === 0;
-
-    // ================= EMPTY STATE =================
-    if (isEmpty) {
-
-        if (chart) {
-            chart.destroy();
-            chart = null;
-        }
-
-        // Optional: show message instead of chart
-        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-
-        ctx.font = "16px Arial";
-        ctx.fillStyle = "#888";
-        ctx.textAlign = "center";
-        ctx.fillText("No data to display 📭", ctx.canvas.width / 2, ctx.canvas.height / 2);
-
-        return;
-    }
-
-    // ================= CREATE CHART =================
-    if (!chart) {
-
-        chart = new Chart(ctx, {
-            type: "doughnut",
-
-            data: {
-                labels: ["Income", "Expense"],
-                datasets: [{
-                    data: [income, expense],
-                    backgroundColor: ["#2ecc71", "#e74c3c"],
-                    borderWidth: 3
-                }]
-            },
-
-            options: {
-                responsive: true,
-                cutout: "60%",
-
-                plugins: {
-                    legend: {
-                        position: "bottom"
-                    }
-                }
-            }
-        });
-
-    } else {
-
-        // ================= UPDATE CHART =================
-        chart.data.datasets[0].data = [income, expense];
-        chart.update();
-    }
-}
-
 
 // ================= INIT =================
 loadData();
+attachLiveValidation();
