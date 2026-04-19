@@ -70,7 +70,8 @@
                     <th>Date</th>
                 
                     <th>Actions</th>
-                    <th>Converted to USD</th>
+                    <th>From → To</th>
+                    <th>Converted</th>
                     
                 </tr>
             </thead>

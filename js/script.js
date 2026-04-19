@@ -49,9 +49,33 @@ function loadData() {
                     <td>
                         <button class="btn-edit" data-item='${JSON.stringify(item)}'>✏️</button>
                         <button class="btn-delete" data-id="${item.id}">❌</button>
-                        <button class="btn-convert" data-id="${item.id}" data-amount="${amount}">💱</button>
+                    
                     </td>
-                    <td id="converted-${item.id}">—</td>
+                                    
+                                <td style="display:flex; align-items:center; gap:6px;">
+                    <select id="from-${item.id}">
+                        <option value="egp">EGP</option>
+                        <option value="usd">USD</option>
+                        <option value="eur">EUR</option>
+                        <option value="gbp">GBP</option>
+                        <option value="sar">SAR</option>
+                        <option value="aed">AED</option>
+                    </select>
+
+                    <span>→</span>
+
+                    <select id="to-${item.id}">
+                        <option value="usd">USD</option>
+                        <option value="eur">EUR</option>
+                        <option value="gbp">GBP</option>
+                        <option value="egp">EGP</option>
+                        <option value="sar">SAR</option>
+                        <option value="aed">AED</option>
+                    </select>
+
+                    <button class="btn-convert" data-id="${item.id}" data-amount="${amount}">💱</button>
+                </td>
+                <td id="converted-${item.id}">—</td>  
                 </tr>
                 `;
             });
@@ -173,17 +197,17 @@ function addTransaction() {
         method: "POST",
         body: formData
     })
-    .then(res => res.json())
-    .then(data => {
+        .then(res => res.json())
+        .then(data => {
 
-        alert(data.message);
+            alert(data.message);
 
-        editId = null;
-        document.getElementById("submitBtn").innerText = "+ Add Transaction";
+            editId = null;
+            document.getElementById("submitBtn").innerText = "+ Add Transaction";
 
-        resetForm();
-        loadData();
-    });
+            resetForm();
+            loadData();
+        });
 }
 
 // ================= RESET =================
@@ -227,9 +251,11 @@ function attachTableEvents() {
 
     // ================= CONVERT =================
     document.querySelectorAll(".btn-convert").forEach(btn => {
-        btn.addEventListener("click", () => {
-            convertCurrency(btn.dataset.amount, btn.dataset.id);
-        });
+        btn.onclick = () => {
+            let id = btn.dataset.id;
+            let amount = btn.dataset.amount;
+            convertCurrency(amount, id);
+        };
     });
 }
 
@@ -244,11 +270,11 @@ function deleteTransaction(id) {
         method: "POST",
         body: formData
     })
-    .then(res => res.json())
-    .then(data => {
-        alert(data.message);
-        loadData();
-    });
+        .then(res => res.json())
+        .then(data => {
+            alert(data.message);
+            loadData();
+        });
 }
 
 
@@ -306,16 +332,19 @@ function renderChart(income, expense) {
     });
 }
 
+// ================= CONVERT CURRENCY =================
 function convertCurrency(amount, id) {
-    fetch(`API_Ops.php?from=EGP&to=USD&amount=${encodeURIComponent(amount)}`)
+
+    let from = document.getElementById("from-" + id).value;
+    let to = document.getElementById("to-" + id).value;
+
+    fetch(`API_Ops.php?from=${from}&to=${to}&amount=${amount}`)
         .then(res => res.json())
         .then(data => {
-            const cell = document.getElementById("converted-" + id);
-
             if (data.status === "success") {
-                cell.innerText = "$ " + data.result;
+                document.getElementById("converted-" + id).innerText = to.toUpperCase() + " " + data.result;
             } else {
-                cell.innerText = "Error";
+                document.getElementById("converted-" + id).innerText = "Error";
             }
         });
 }
