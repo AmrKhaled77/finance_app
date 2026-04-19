@@ -100,13 +100,62 @@ function addTransaction() {
 
     clearErrors();
 
-    let formData = new FormData();
+    let isValid = true;
 
     const title = document.getElementById("title").value.trim();
     const amount = document.getElementById("amount").value.trim();
     const type = document.getElementById("type").value;
     const category = document.getElementById("category").value.trim();
     const date = document.getElementById("date").value;
+
+    // TITLE
+    if (!title) {
+        setError("title", "Title is required");
+        isValid = false;
+    } else if (title.length < 3) {
+        setError("title", "Minimum 3 characters");
+        isValid = false;
+    }
+
+    // AMOUNT
+    if (!amount) {
+        setError("amount", "Amount is required");
+        isValid = false;
+    } else if (isNaN(amount) || Number(amount) <= 0) {
+        setError("amount", "Must be > 0");
+        isValid = false;
+    }
+
+    // TYPE
+    if (!type) {
+        setError("type", "Select type");
+        isValid = false;
+    }
+
+    // CATEGORY
+    if (!category) {
+        setError("category", "Category required");
+        isValid = false;
+    }
+
+    // DATE
+    if (!date) {
+        setError("date", "Date required");
+        isValid = false;
+    } else {
+        const selectedDate = new Date(date);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (selectedDate > today) {
+            setError("date", "Future date not allowed");
+            isValid = false;
+        }
+    }
+
+    if (!isValid) return;
+
+    let formData = new FormData();
 
     formData.append("action", editId === null ? "add" : "update");
 
@@ -127,21 +176,6 @@ function addTransaction() {
     .then(res => res.json())
     .then(data => {
 
-        // ================= HANDLE SERVER ERRORS =================
-        if (data.status === "error") {
-
-            if (data.errors) {
-                for (let field in data.errors) {
-                    setError(field, data.errors[field]);
-                }
-            } else {
-                alert(data.message);
-            }
-
-            return;
-        }
-
-        // ================= SUCCESS =================
         alert(data.message);
 
         editId = null;
@@ -149,30 +183,6 @@ function addTransaction() {
 
         resetForm();
         loadData();
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Server error");
-    });
-}
-function setError(field, msg) {
-    document.getElementById(field + "Error").innerText = msg;
-}
-
-function clearErrors() {
-    ["title", "amount", "type", "category", "date"].forEach(f => {
-        document.getElementById(f + "Error").innerText = "";
-    });
-}
-
-
-function setError(field, msg) {
-    document.getElementById(field + "Error").innerText = msg;
-}
-
-function clearErrors() {
-    ["title", "amount", "type", "category", "date"].forEach(f => {
-        document.getElementById(f + "Error").innerText = "";
     });
 }
 
@@ -191,10 +201,9 @@ function resetForm() {
 // ================= TABLE EVENTS =================
 function attachTableEvents() {
 
+    // ================= EDIT =================
     document.querySelectorAll(".btn-edit").forEach(btn => {
-
         btn.addEventListener("click", () => {
-
             const item = JSON.parse(btn.dataset.item);
 
             editId = item.id;
@@ -206,6 +215,20 @@ function attachTableEvents() {
             document.getElementById("date").value = item.date;
 
             document.getElementById("submitBtn").innerText = "Update Transaction";
+        });
+    });
+
+    // ================= DELETE =================
+    document.querySelectorAll(".btn-delete").forEach(btn => {
+        btn.addEventListener("click", () => {
+            deleteTransaction(btn.dataset.id);
+        });
+    });
+
+    // ================= CONVERT =================
+    document.querySelectorAll(".btn-convert").forEach(btn => {
+        btn.addEventListener("click", () => {
+            convertCurrency(btn.dataset.amount, btn.dataset.id);
         });
     });
 }
@@ -283,21 +306,20 @@ function renderChart(income, expense) {
     });
 }
 
+function convertCurrency(amount, id) {
+    fetch(`API_Ops.php?from=EGP&to=USD&amount=${encodeURIComponent(amount)}`)
+        .then(res => res.json())
+        .then(data => {
+            const cell = document.getElementById("converted-" + id);
+
+            if (data.status === "success") {
+                cell.innerText = "$ " + data.result;
+            } else {
+                cell.innerText = "Error";
+            }
+        });
+}
+
 // ================= INIT =================
 loadData();
 attachLiveValidation();
-
-// test server side valdation 
-// fetch("DB_Ops.php", {
-//     method: "POST",
-//     body: new URLSearchParams({
-//         action: "add",
-//         title: "",
-//         amount: -100,
-//         type: "wrong",
-//         category: "",
-//         date: "2030-01-01"
-//     })
-// })
-// .then(res => res.json())
-// .then(console.log);
