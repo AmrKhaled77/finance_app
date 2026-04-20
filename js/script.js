@@ -36,23 +36,23 @@ function loadData() {
 
                 let amount = Number(item.amount) || 0;
 
-                if (item.type === "income") income += amount;
-                else expense += amount;
+                if (item.type === "income") income += amount; else expense += amount;
 
                 rows += `
-                <tr>
-                    <td>${item.title}</td>
-                    <td>${amount}</td>
-                    <td>${item.type}</td>
-                    <td>${item.category}</td>
-                    <td>${item.date}</td>
-                    <td>
-                        <button class="btn-edit" data-item='${JSON.stringify(item)}'>✏️</button>
-                        <button class="btn-delete" data-id="${item.id}">❌</button>
+                <tr class="hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0">
+                    <td class="px-4 py-3 whitespace-nowrap font-medium text-gray-900">${item.title}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">${amount}</td>
+                    <td class="px-4 py-3 whitespace-nowrap capitalize">
+                        <span class="${item.type === 'income' ? 'text-green-600 bg-green-50' : 'text-red-600 bg-red-50'} px-2 py-1 rounded-full text-xs font-semibold">
+                            ${item.type}</span></td>
+                    <td class="px-4 py-3 whitespace-nowrap text-gray-500">${item.category}</td>
+                    <td class="px-4 py-3 whitespace-nowrap text-gray-500">${item.date}</td>
+                    <td class="px-4 py-3 whitespace-nowrap">
+                        <button class="btn-edit hover:scale-110 transition-transform mr-2" data-item='${JSON.stringify(item)}' title="Edit">✏️</button>
+                        <button class="btn-delete hover:scale-110 transition-transform text-red-500" data-id="${item.id}">❌</button>
                     
                     </td>
-                                    
-                                <td style="display:flex; align-items:center; gap:6px;">
+                    <td class="px-4 py-3 whitespace-nowrap" style="display:flex; align-items:center; gap:6px;">
                     <select id="from-${item.id}">
                         <option value="egp">EGP</option>
                         <option value="usd">USD</option>
@@ -93,12 +93,18 @@ function loadData() {
 
 // ================= ERROR HANDLING =================
 function setError(id, msg) {
-    document.getElementById(id + "Error").innerText = msg;
+    const errorElement = document.getElementById(id + "Error");
+    errorElement.innerText = msg;
+    if (msg !== "") {
+        errorElement.style.display = "block";
+    } else {
+        errorElement.style.display = "none";
+    }
 }
 
 function clearErrors() {
     ["title", "amount", "type", "category", "date"].forEach(id => {
-        document.getElementById(id + "Error").innerText = "";
+        setError(id, "");
     });
 }
 
@@ -171,9 +177,21 @@ function addTransaction() {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        if (selectedDate > today) {
+        if (selectedDate.getFullYear() > today.getFullYear()) {
             setError("date", "Future date not allowed");
             isValid = false;
+        }
+        else if (selectedDate.getFullYear() === today.getFullYear()) {
+            if (selectedDate.getMonth() > today.getMonth()) {
+                setError("date", "Future date not allowed");
+                isValid = false;
+            }
+            else if (selectedDate.getMonth() === today.getMonth()) {
+                if (selectedDate.getDate() > today.getDate()) {
+                    setError("date", "Future date not allowed");
+                    isValid = false;
+                }
+            }
         }
     }
 
@@ -194,8 +212,7 @@ function addTransaction() {
     formData.append("date", date);
 
     fetch("DB_Ops.php", {
-        method: "POST",
-        body: formData
+        method: "POST", body: formData
     })
         .then(res => res.json())
         .then(data => {
@@ -267,8 +284,7 @@ function deleteTransaction(id) {
     formData.append("id", id);
 
     fetch("DB_Ops.php", {
-        method: "POST",
-        body: formData
+        method: "POST", body: formData
     })
         .then(res => res.json())
         .then(data => {
@@ -276,7 +292,6 @@ function deleteTransaction(id) {
             loadData();
         });
 }
-
 
 
 function renderChart(income, expense) {
@@ -292,15 +307,11 @@ function renderChart(income, expense) {
     if (isEmpty) {
 
         chart = new Chart(ctx, {
-            type: "doughnut",
-            data: {
-                labels: ["No Data"],
-                datasets: [{
-                    data: [1],
-                    backgroundColor: ["#ddd"]
+            type: "doughnut", data: {
+                labels: ["No Data"], datasets: [{
+                    data: [1], backgroundColor: ["#ddd"]
                 }]
-            },
-            options: {
+            }, options: {
                 plugins: {
                     legend: {
                         display: false
@@ -313,17 +324,12 @@ function renderChart(income, expense) {
     }
 
     chart = new Chart(ctx, {
-        type: "doughnut",
-        data: {
-            labels: ["Income", "Expense"],
-            datasets: [{
-                data: [income, expense],
-                backgroundColor: ["#2ecc71", "#e74c3c"]
+        type: "doughnut", data: {
+            labels: ["Income", "Expense"], datasets: [{
+                data: [income, expense], backgroundColor: ["#2ecc71", "#e74c3c"]
             }]
-        },
-        options: {
-            responsive: true,
-            plugins: {
+        }, options: {
+            responsive: true, plugins: {
                 legend: {
                     position: "bottom"
                 }

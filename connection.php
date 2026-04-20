@@ -3,10 +3,10 @@
 // connection.php
 define('API_PRIMARY', 'https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1');
 define('API_FALLBACK', 'https://latest.currency-api.pages.dev/v1');
-$host = "localhost";
-$user = "root";
-$pass = "";
-$db   = "finance_app";
+$host = "sql104.infinityfree.com";
+$user = "if0_41702925";
+$pass = "rPcmRBaRiUZ35";
+$db   = "if0_41702925_finance";
 
 
 

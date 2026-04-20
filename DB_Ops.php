@@ -1,12 +1,21 @@
 <?php
+session_start();
 include "connection.php";
+global $conn;
 header("Content-Type: application/json");
+
+if (!isset($_SESSION['user_id'])) {
+    echo json_encode(["status" => "error", "message" => "Unauthorized"]);
+    exit;
+}
 
 /* ---------------- READ ---------------- */
 if (isset($_GET['action']) && $_GET['action'] == "get") {
 
-    $result = $conn->query("SELECT * FROM transactions ORDER BY date DESC");
-
+    $statement = $conn->prepare("SELECT * FROM transactions WHERE userId = ? ORDER BY date DESC");
+    $statement->bind_param("i", $_SESSION['user_id']);
+    $statement->execute();
+    $result = $statement->get_result();
     $data = [];
 
     while ($row = $result->fetch_assoc()) {
@@ -14,6 +23,7 @@ if (isset($_GET['action']) && $_GET['action'] == "get") {
     }
 
     echo json_encode($data);
+    $statement->close();
     exit;
 }
 
@@ -25,16 +35,19 @@ if (isset($_POST['action']) && $_POST['action'] == "add") {
     $type = $_POST['type'];
     $category = $_POST['category'];
     $date = $_POST['date'];
+    $user_id = $_SESSION['user_id'];
 
     $stmt = $conn->prepare("
-        INSERT INTO transactions (title, amount, type, category, date)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO transactions (title, amount, type, category, date, userId)
+        VALUES (?, ?, ?, ?, ?, ?)
     ");
 
-    $stmt->bind_param("sdsss", $title, $amount, $type, $category, $date);
-    $stmt->execute();
-
-    echo json_encode(["status" => "success", "message" => "Transaction added"]);
+    $stmt->bind_param("sdsssi", $title, $amount, $type, $category, $date, $user_id);
+    if ($stmt->execute()) {
+        echo json_encode(["status" => "success", "message" => "Transaction added"]);
+    } else {
+        echo json_encode(["status" => "error", "message" => "Failed to add transaction"]);
+    }
     exit;
 }
 
@@ -51,13 +64,15 @@ if (isset($_POST['action']) && $_POST['action'] == "update") {
     $stmt = $conn->prepare("
         UPDATE transactions 
         SET title=?, amount=?, type=?, category=?, date=? 
-        WHERE id=?
+        WHERE id=? AND userId = ?
     ");
 
-    $stmt->bind_param("sdsssi", $title, $amount, $type, $category, $date, $id);
-    $stmt->execute();
-
-    echo json_encode(["status" => "success", "message" => "Updated"]);
+    $stmt->bind_param("sdsssii", $title, $amount, $type, $category, $date, $id, $_SESSION['user_id']);
+    if ($stmt -> execute()) {
+        echo json_encode(["status" => "success", "message" => "Transaction updated"]);
+    } else {
+        echo json_encode(["status" => "error", "message" => "Failed to update transaction"]);
+    }
     exit;
 }
 
@@ -66,11 +81,14 @@ if (isset($_POST['action']) && $_POST['action'] == "delete") {
 
     $id = $_POST['id'];
 
-    $stmt = $conn->prepare("DELETE FROM transactions WHERE id=?");
-    $stmt->bind_param("i", $id);
-    $stmt->execute();
+    $stmt = $conn->prepare("DELETE FROM transactions WHERE id=? AND userId = ?");
+    $stmt->bind_param("ii", $id, $_SESSION['user_id']);
+    if ($stmt->execute()) {
+        echo json_encode(["status" => "success", "message" => "Deleted"]);
+    } else {
+        echo json_encode(["status" => "error", "message" => "Failed to delete transaction"]);
+    }
 
-    echo json_encode(["status" => "success", "message" => "Deleted"]);
     exit;
 }
 

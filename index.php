@@ -1,97 +1,47 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Finance App</title>
+<?php include "header.php"; ?>
 
-    <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-</head>
+<div class="flex flex-col items-center justify-center w-full my-auto">
 
-<body>
+    <div class="text-center mb-12 max-w-2xl">
+        <h1 class="text-4xl md:text-5xl font-bold text-gray-900 leading-tight mb-4">
+            Smart Tracking.
+            <br>
+            Global Insights
+        </h1>
+        <p class="text-gray-500 mb-8">Manage your transactions and stay updated with real-time currency conversions, all
+            in one place.</p>
 
-<header>
-    <h1>💰 Finance SPA App</h1>
-</header>
-
-<!-- DASHBOARD -->
-<div class="stats">
-    <div class="stat-box income">Income <span id="incomeTotal">0</span></div>
-    <div class="stat-box expense">Expense <span id="expenseTotal">0</span></div>
-    <div class="stat-box balance">Balance <span id="balanceTotal">0</span></div>
-</div>
-
-
-<div class="card chart-card">
-    <h3>📊 Income vs Expense</h3>
-
-    <div class="chart-container">
-        <canvas id="financeChart"></canvas>
-    </div>
-</div>
-<div class="container">
-
-    <!-- FORM -->
-   <div class="card form-card">
-    <h3>Add / Edit Transaction</h3>
-
-    <input type="text" id="title" placeholder="Title">
-    <small  class="error" style="color:#ff3b30; font-size:12px; margin-top:4px; display:block; font-weight:500;" id="titleError"></small>
-
-    <input type="number" id="amount" placeholder="Amount">
-    <small  class="error" style="color:#ff3b30; font-size:12px; margin-top:4px; display:block; font-weight:500;" id="amountError"></small>
-
-    <select id="type">
-        <option value="">Select Type</option>
-        <option value="income">Income</option>
-        <option value="expense">Expense</option>
-    </select>
-    <small  class="error" style="color:#ff3b30; font-size:12px; margin-top:4px; display:block; font-weight:500;" id="typeError"></small>
-
-    <input type="text" id="category" placeholder="Category">
-    <small  class="error" style="color:#ff3b30; font-size:12px; margin-top:4px; display:block; font-weight:500;" id="categoryError"></small>
-
-    <input type="date" id="date">
-    <small  class="error" style="color:#ff3b30; font-size:12px; margin-top:4px; display:block; font-weight:500;" id="dateError"></small>
-
-    <button id="submitBtn" onclick="addTransaction()">+ Add Transaction</button>
-</div>
-
-    <!-- TABLE -->
-    <div class="card" style="flex:1;">
-        <h3>Transactions</h3>
-
-        <table>
-            <thead>
-                <tr>
-                    <th>Title</th>
-                    <th>Amount</th>
-                    <th>Type</th>
-                    <th>Category</th>
-                    <th>Date</th>
-                
-                    <th>Actions</th>
-                    <th>From → To</th>
-                    <th>Converted</th>
-                    
-                </tr>
-            </thead>
-
-            <tbody id="tableData"></tbody>
-        </table>
+        <?php if (!isset($_SESSION['user_id'])): ?>
+            <a href="login.php"
+               class="bg-[#d4f88a] text-black text-base font-semibold py-3 px-8 rounded-full shadow-sm hover:bg-[#c4ec77] transition duration-300 inline-block">
+                Get Started
+            </a>
+        <?php else: ?>
+            <a href="dashboard.php"
+               class="bg-[#d4f88a] text-black text-base font-semibold py-3 px-8 rounded-full shadow-sm hover:bg-[#c4ec77] transition duration-300 inline-block">
+                Go to Dashboard
+            </a>
+        <?php endif; ?>
     </div>
 
+    <div class="w-full max-w-4xl bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-xl font-bold text-gray-900">Live Exchange Rates</h2>
+            <span class="bg-gray-100 text-gray-600 text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="currency-container">
+            <div class="p-4 border border-gray-200 rounded-xl bg-gray-50 animate-pulse h-24"></div>
+            <div class="p-4 border border-gray-200 rounded-xl bg-gray-50 animate-pulse h-24"></div>
+            <div class="p-4 border border-gray-200 rounded-xl bg-gray-50 animate-pulse h-24"></div>
+        </div>
+
+        <p class="text-xs text-gray-400 mt-4 text-center" id="last-updated">Fetching latest rates...</p>
+    </div>
 </div>
-<div id="errorBox" style="
-    display:none;
-    background:#ffdddd;
-    color:#a10000;
-    padding:10px;
-    margin-bottom:10px;
-    border:1px solid #ff5c5c;
-    border-radius:6px;
-"></div>
 
-<script src="js/script.js"></script>
+<script src="js/exchange-rates.js"></script>
 
-</body>
-</html>
+<?php include "footer.php"; ?>
